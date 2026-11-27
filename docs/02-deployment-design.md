@@ -2207,3 +2207,92 @@ eventual vulneración de credenciales.
 - Detección preventiva de secretos expuestos.
 - Respuesta organizada ante incidentes de seguridad.
 - Integración segura con Docker Compose y CI/CD.
+
+
+---
+
+## Referencias técnicas
+
+Las siguientes referencias corresponden a documentación oficial
+y estándares técnicos que respaldan las decisiones de arquitectura,
+automatización, seguridad y operación desarrolladas en esta propuesta.
+
+### 2.1. Containerización y arquitectura de despliegue
+
+#### Docker
+
+- [Docker Compose — Production deployment](https://docs.docker.com/compose/how-tos/production/)
+- [Docker Compose — Services reference](https://docs.docker.com/reference/compose-file/services/)
+- [Docker Compose — Networking](https://docs.docker.com/compose/how-tos/networking/)
+- [Docker Compose — Configuration validation](https://docs.docker.com/reference/cli/docker/compose/config/)
+- [Docker — Multi-stage builds](https://docs.docker.com/build/building/multi-stage/)
+- [Docker — Bind mounts](https://docs.docker.com/engine/storage/bind-mounts/)
+- [Docker — JSON File logging driver](https://docs.docker.com/engine/logging/drivers/json-file/)
+
+#### Amazon Elastic Container Registry (ECR)
+
+- [AWS — ECR image tag immutability](https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-tag-mutability.html)
+- [AWS — ECR private registry authentication](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html)
+- [AWS — ECR lifecycle policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html)
+
+#### Persistencia y observabilidad
+
+- [AWS — Mounting Amazon EBS volumes](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-using-volumes.html)
+- [PostgreSQL — Client authentication and pg_hba.conf](https://www.postgresql.org/docs/current/auth-pg-hba-conf.html)
+- [AWS — Amazon CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
+- [Fluent Bit — Amazon CloudWatch output](https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch)
+
+### 2.2. Integración y entrega continua (CI/CD)
+
+#### GitHub Actions y control de cambios
+
+- [GitHub — Protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [GitHub Actions — Reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
+- [GitHub Actions — Deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+- [GitHub Actions — Concurrency](https://docs.github.com/en/actions/concepts/workflows-and-actions/concurrency)
+- [GitHub Actions — OpenID Connect in AWS](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws)
+
+#### Calidad de código y seguridad de artefactos
+
+- [SonarQube — Quality Gates](https://docs.sonarsource.com/sonarqube-server/quality-standards-administration/managing-quality-gates/introduction)
+- [Trivy — Container image scanning](https://trivy.dev/docs/latest/target/container_image/)
+- [Gitleaks — Secret scanning](https://github.com/gitleaks/gitleaks)
+
+#### Automatización de despliegues
+
+- [AWS Systems Manager — Run Command](https://docs.aws.amazon.com/systems-manager/latest/userguide/run-command.html)
+- [AWS Systems Manager — Run Command permissions](https://docs.aws.amazon.com/systems-manager/latest/userguide/run-command-setting-up.html)
+- [OpenGitOps — GitOps principles](https://opengitops.dev/)
+
+### 2.3. Gestión de identidades, credenciales y secretos
+
+#### Identity and Access Management
+
+- [AWS IAM — Security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
+- [AWS IAM Identity Center — Permission Sets](https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsetsconcept.html)
+- [AWS CLI — IAM Identity Center authentication](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html)
+- [AWS EC2 — IAM Roles and Instance Profiles](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+- [AWS EC2 — Instance Metadata Service (IMDSv2)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html)
+- [AWS Well-Architected — Use temporary credentials](https://docs.aws.amazon.com/wellarchitected/latest/framework/sec02-bp02.html)
+
+#### Gestión y rotación de secretos
+
+- [AWS Secrets Manager — Best practices](https://docs.aws.amazon.com/secretsmanager/latest/userguide/best-practices.html)
+- [AWS Secrets Manager — Retrieve secrets using AWS CLI](https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_cli.html)
+- [AWS Secrets Manager — Secret rotation](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotating-secrets.html)
+- [AWS Secrets Manager — CloudTrail audit logging](https://docs.aws.amazon.com/secretsmanager/latest/userguide/cloudtrail_log_entries.html)
+- [AWS Well-Architected — Store and use secrets securely](https://docs.aws.amazon.com/wellarchitected/latest/framework/sec02-bp03.html)
+- [AWS Well-Architected — Audit and rotate credentials](https://docs.aws.amazon.com/wellarchitected/latest/framework/sec02-bp05.html)
+
+#### Seguridad en contenedores e infraestructura como código
+
+- [Docker Compose — Manage secrets securely](https://docs.docker.com/compose/how-tos/use-secrets/)
+- [Docker Compose — Secrets specification](https://docs.docker.com/reference/compose-file/secrets/)
+- [Docker BuildKit — Build secrets](https://docs.docker.com/build/building/secrets/)
+- [HashiCorp Terraform — Managing sensitive data](https://developer.hashicorp.com/terraform/language/manage-sensitive-data)
+- [GitHub — Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
+
+---
+
+Las referencias proporcionadas respaldan los mecanismos técnicos
+propuestos.
