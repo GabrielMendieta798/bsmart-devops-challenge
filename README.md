@@ -80,7 +80,7 @@ docker compose --env-file .env.example config --quiet
 docker compose --env-file .env.example config --services
 ```
 
-[Consultar ejecuciones de GitHub Actions](../../actions)
+[Consultar ejecuciones de GitHub Actions](https://github.com/GabrielMendieta798/bsmart-devops-challenge/actions)
 
 ## Consideraciones técnicas
 
