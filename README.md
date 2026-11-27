@@ -12,26 +12,43 @@ procesos operativos mediante buenas prácticas de DevOps.
 ## Objetivos
 
 - Diagnosticar incidentes en infraestructura Linux sobre AWS.
-- Restablecer servicios productivos minimizando el riesgo de pérdida de datos.
-- Implementar estrategias de monitoreo y prevención.
-- Diseñar procesos de despliegue reproducibles y automatizados.
-- Garantizar una gestión segura de credenciales.
+- Restablecer servicios productivos preservando la integridad de los datos.
+- Implementar estrategias de observabilidad y Self-Healing.
+- Prevenir incidentes recurrentes mediante estandarización y automatización.
+- Diseñar procesos de despliegue reproducibles y seguros.
+- Implementar una gestión centralizada de credenciales.
 
-## Alcance
+## Índice
 
-### Parte 1 — Diagnóstico
+### Parte 1 — Diagnóstico y recuperación
 
-- Secuencia de diagnóstico.
-- Recuperación del servicio.
-- Estrategia de prevención y monitoreo.
-- Análisis de incidentes recurrentes.
+- [Documento completo](docs/01-incident-response.md)
+- [1.1. Secuencia de diagnóstico](docs/01-incident-response.md#11-secuencia-de-diagnóstico)
+- [1.2. Restablecimiento del servicio](docs/01-incident-response.md#12-restablecimiento-del-servicio)
+- [1.3. Estrategia de monitoreo y prevención](docs/01-incident-response.md#13-estrategia-de-monitoreo-y-prevención)
+- [1.4. Análisis de incidentes recurrentes](docs/01-incident-response.md#14-análisis-de-incidentes-recurrentes)
+- [Referencias técnicas](docs/01-incident-response.md#referencias-técnicas)
 
 ### Parte 2 — Diseño
 
-- Containerización mediante Docker.
-- Automatización CI/CD.
-- Gestión de secretos y credenciales.
+- 2.1. Esquema de despliegue con Docker.
+- 2.2. Automatización CI/CD.
+- 2.3. Gestión de secretos y credenciales.
+
+## Consideraciones técnicas
+
+Las soluciones propuestas consideran la infraestructura descrita
+en el challenge y explicitan los supuestos técnicos necesarios.
+
+Se prioriza la continuidad operativa, la seguridad, la simplicidad
+y la evolución progresiva de la infraestructura.
+
+Los procedimientos y configuraciones presentados son propuestas
+técnicas que deberán validarse antes de su implementación
+en ambientes productivos.
 
 ## Autor
 
-Gabriel Mendieta — DevOps / Cloud Engineer
+**Gabriel Mendieta** — DevOps / Cloud Engineer
+
+- [GitHub](https://github.com/GabrielMendieta798)
