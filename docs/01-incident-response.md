@@ -1315,3 +1315,24 @@ de los incidentes como su impacto operativo.
 El objetivo no es solamente recuperar los servicios
 más rápido, sino evitar que el mismo problema vuelva
 a comprometer la disponibilidad de la plataforma.
+
+## Referencias técnicas
+
+### Almacenamiento y recuperación
+
+- [AWS — Amazon EBS Elastic Volumes](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modify-volume.html)
+- [AWS — Extend the file system after resizing EBS](https://docs.aws.amazon.com/ebs/latest/userguide/recognize-expanded-volume-linux.html)
+- [AWS — Create EBS Snapshots](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-creating-snapshot.html)
+- [PostgreSQL — Continuous Archiving and Point-in-Time Recovery](https://www.postgresql.org/docs/current/continuous-archiving.html)
+
+### Monitoreo y observabilidad
+
+- [AWS — CloudWatch Agent Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/metrics-collected-by-CloudWatch-agent.html)
+- [AWS — CloudWatch Agent Configuration](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html)
+- [AWS — CloudWatch Logs Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html)
+
+### Automatización y escalabilidad
+
+- [AWS — CloudWatch Events in EventBridge](https://docs.aws.amazon.com/eventbridge/latest/ref/events-ref-monitoring.html)
+- [AWS — Systems Manager Automation with EventBridge](https://docs.aws.amazon.com/systems-manager/latest/userguide/running-automations-event-bridge.html)
+- [AWS — RDS Storage Auto Scaling](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIOPS.Autoscaling.html)
