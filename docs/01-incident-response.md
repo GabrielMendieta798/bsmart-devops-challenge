@@ -1131,3 +1131,187 @@ mediante pruebas controladas en ambientes no productivos.
 La estrategia busca evolucionar desde una operación
 reactiva hacia una operación preventiva, automatizada
 y basada en métricas.
+
+## 1.4. Análisis de incidentes recurrentes
+
+Que el mismo tipo de incidente haya ocurrido cuatro veces
+durante un año, en servidores diferentes, sugiere que
+podríamos estar frente a un problema sistémico en la
+gestión de la infraestructura y no únicamente ante
+una falla puntual de almacenamiento.
+
+Esto podría indicar que las acciones realizadas anteriormente
+estuvieron orientadas a recuperar los servicios, pero no
+necesariamente a identificar y corregir las causas raíz.
+
+Sin embargo, no asumiría que los cuatro incidentes tuvieron
+exactamente el mismo origen sin analizar sus antecedentes.
+
+### Paso 1 — Identificar patrones comunes
+
+Realizaría un análisis comparativo de los incidentes,
+revisando las métricas históricas, los logs, las configuraciones
+de los servidores y las acciones de recuperación realizadas.
+
+Evaluaría las siguientes hipótesis:
+
+| Posible problema | Impacto |
+|------------------|---------|
+| Falta de monitoreo preventivo | Detección tardía de la saturación. |
+| Ausencia de políticas de retención | Crecimiento descontrolado de archivos. |
+| Falta de Capacity Planning | Infraestructura insuficiente frente al crecimiento. |
+| Configuraciones inconsistentes | Diferencias operativas entre servidores. |
+| Infraestructura acoplada | Una falla afecta a múltiples servicios. |
+| Falta de seguimiento de incidentes | Repetición de problemas anteriormente mitigados. |
+
+El objetivo sería determinar si existe un patrón común
+entre los servidores afectados y verificar si otros
+servidores presentan las mismas condiciones de riesgo.
+
+### Paso 2 — Root Cause Analysis (RCA)
+
+Aplicaría un análisis de causa raíz para identificar
+no solamente qué provocó el incidente, sino también
+por qué los mecanismos preventivos no fueron suficientes.
+
+Una metodología que utilizaría sería la de los cinco porqués.
+
+Por ejemplo, considerando un escenario hipotético:
+
+1. ¿Por qué dejó de funcionar la aplicación?
+   Porque PostgreSQL dejó de aceptar conexiones.
+
+2. ¿Por qué PostgreSQL dejó de funcionar?
+   Porque no disponía de espacio suficiente para escribir.
+
+3. ¿Por qué se agotó el almacenamiento?
+   Porque los archivos de video crecieron sin un control adecuado.
+
+4. ¿Por qué no se detectó el crecimiento a tiempo?
+   Porque no existían alarmas preventivas adecuadas.
+
+5. ¿Por qué otros servidores presentaron el mismo problema?
+   Porque no existía una configuración operativa estandarizada
+   que garantizara el monitoreo y la gestión del almacenamiento.
+
+Este análisis es ilustrativo. Las conclusiones definitivas
+deberán estar respaldadas por las evidencias recopiladas.
+
+### Paso 3 — Estandarización de la infraestructura
+
+Si el análisis confirma diferencias de configuración
+o ausencia de controles preventivos, propondría establecer
+una configuración base reutilizable para los servidores.
+
+Utilizaría Terraform para el aprovisionamiento de
+infraestructura y Ansible para la configuración
+del sistema operativo.
+
+Terraform permitiría estandarizar:
+
+- Instancias EC2.
+- Volúmenes EBS.
+- IAM Roles.
+- CloudWatch Alarms.
+- SNS Topics.
+- Políticas de backup.
+- Tags de identificación de recursos.
+
+Ansible permitiría estandarizar:
+
+- Instalación y configuración de CloudWatch Agent.
+- Rotación y retención de logs.
+- Configuración de servicios.
+- Permisos y configuraciones del sistema operativo.
+- Herramientas de diagnóstico.
+
+También revisaría la infraestructura existente para
+identificar desviaciones respecto de la configuración
+esperada (configuration drift).
+
+El objetivo sería garantizar que tanto los servidores
+existentes como los nuevos cuenten con los controles
+operativos necesarios desde su aprovisionamiento.
+
+### Paso 4 — Runbooks y documentación de incidentes
+
+Documentaría procedimientos reutilizables para responder
+a incidentes frecuentes de infraestructura.
+
+Por ejemplo:
+
+```text
+runbooks/
+├── disk-full.md
+├── database-unavailable.md
+├── ebs-volume-expansion.md
+├── failed-deployment.md
+└── backup-restore.md
+```
+
+Cada runbook incluiría:
+
+- Condiciones de activación.
+- Secuencia de diagnóstico.
+- Comandos y procedimientos de recuperación.
+- Consideraciones de seguridad.
+- Criterios de validación.
+- Alternativas ante fallos de recuperación.
+
+También propondría realizar postmortems sin
+culpabilización individual, documentando:
+
+- Impacto del incidente.
+- Línea temporal de los acontecimientos.
+- Causa raíz y factores contribuyentes.
+- Acciones de mitigación.
+- Acciones correctivas y preventivas.
+- Seguimiento de las mejoras acordadas con el equipo.
+
+Esto permitiría transformar cada incidente en una
+oportunidad de mejora para toda la infraestructura.
+
+### Paso 5 — Seguimiento y mejora continua
+
+Evaluaría la efectividad de las medidas implementadas
+mediante indicadores operativos.
+
+| Indicador | Objetivo |
+|-----------|----------|
+| MTTD | Reducir el tiempo medio de detección. |
+| MTTR | Reducir el tiempo medio de recuperación del servicio. |
+| Incidentes recurrentes | Reducir la repetición de problemas conocidos. |
+| Cobertura de monitoreo | Verificar que todos los servidores relevantes estén monitoreados. |
+| Ampliaciones automáticas de EBS | Identificar crecimientos anormales y necesidades de capacidad. |
+
+Una ampliación automática exitosa, como la propuesta
+en la sección 1.3, no debería considerarse una solución
+definitiva al problema.
+
+Cada ejecución del mecanismo de Self-Healing debería
+quedar registrada y ser analizada para determinar si
+responde a un crecimiento esperado del negocio o a
+una condición anormal de la infraestructura.
+
+Finalmente, validaría las acciones preventivas mediante
+pruebas controladas y revisiones periódicas, verificando
+que las mejoras se apliquen también a los servidores
+que todavía no hayan presentado incidentes.
+
+### Conclusión
+
+La recurrencia de incidentes similares en servidores
+diferentes sugiere la necesidad de revisar los procesos
+de gestión, monitoreo y estandarización de infraestructura.
+
+No limitaría la solución a ampliar el almacenamiento
+cada vez que se produzca una saturación.
+
+Buscaría combinar observabilidad, automatización,
+Infrastructure as Code, análisis de causa raíz y
+mejora continua para reducir tanto la frecuencia
+de los incidentes como su impacto operativo.
+
+El objetivo no es solamente recuperar los servicios
+más rápido, sino evitar que el mismo problema vuelva
+a comprometer la disponibilidad de la plataforma.
