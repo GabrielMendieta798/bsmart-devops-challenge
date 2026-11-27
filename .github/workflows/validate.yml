@@ -1,0 +1,52 @@
+name: Docker Compose Validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate deployment configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify Docker Compose
+        run: docker compose version
+
+      - name: Validate Compose configuration
+        run: |
+          docker compose --env-file .env.example config --quiet
+
+      - name: Verify expected services
+        run: |
+          expected="$(printf '%s\n' api video-worker web | sort)"
+          actual="$(docker compose --env-file .env.example config --services | sort)"
+
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Unexpected Compose services"
+            exit 1
+          fi
+
+          echo "All expected services validated."
+
+      - name: Verify environment file protection
+        run: |
+          git check-ignore --quiet --no-index .env
+          git ls-files --error-unmatch .env.example
+
+          if git ls-files --error-unmatch .env > /dev/null 2>&1; then
+            echo "::error::The .env file must not be tracked"
+            exit 1
+          fi
+
+          echo "Environment file protection validated."

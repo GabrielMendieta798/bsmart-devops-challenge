@@ -1,5 +1,6 @@
 # Bsmart — DevOps Engineer Challenge
 
+
 ## Introducción
 
 Este repositorio contiene la resolución del challenge técnico
@@ -8,6 +9,19 @@ para la posición de DevOps Engineer en Bsmart.
 La propuesta está orientada a resolver problemas de infraestructura
 productiva, mejorar la confiabilidad de los servicios y automatizar
 procesos operativos mediante buenas prácticas de DevOps.
+
+## Resumen ejecutivo
+
+| Pregunta | Solución propuesta |
+|----------|-------------------|
+| 1.1. Diagnóstico | Identificación del filesystem afectado, consumo de almacenamiento, procesos y estado de los servicios. |
+| 1.2. Recuperación | Contención del incidente, ampliación segura de EBS y recuperación controlada de los servicios. |
+| 1.3. Prevención | CloudWatch Agent, alarmas, SNS, rotación de logs y automatización preventiva mediante SSM. |
+| 1.4. Incidentes recurrentes | Análisis de causa raíz, estandarización de infraestructura y mejora continua. |
+| 2.1. Docker | Docker Compose, imágenes inmutables en ECR, redes independientes y almacenamiento persistente. |
+| 2.2. CI/CD | GitHub Actions, Quality Gates, OIDC, promoción entre ambientes, despliegue mediante SSM y rollback. |
+| 2.3. Credenciales | IAM Identity Center, Secrets Manager, mínimo privilegio, rotación y auditoría de accesos. |
+
 
 ## Objetivos
 
@@ -29,11 +43,44 @@ procesos operativos mediante buenas prácticas de DevOps.
 - [1.4. Análisis de incidentes recurrentes](docs/01-incident-response.md#14-análisis-de-incidentes-recurrentes)
 - [Referencias técnicas](docs/01-incident-response.md#referencias-técnicas)
 
-### Parte 2 — Diseño
+### Parte 2 — Diseño y automatización
 
-- 2.1. Esquema de despliegue con Docker.
-- 2.2. Automatización CI/CD.
-- 2.3. Gestión de secretos y credenciales.
+- [Documento completo](docs/02-deployment-design.md)
+- [2.1. Esquema de despliegue con Docker](docs/02-deployment-design.md#21-esquema-de-despliegue-con-docker)
+- [2.2. Automatización del proceso desde el push hasta producción](docs/02-deployment-design.md#22-automatización-del-proceso-desde-el-push-hasta-producción)
+- [2.3. Gestión segura de credenciales](docs/02-deployment-design.md#23-gestión-segura-de-credenciales)
+- [Referencias técnicas](docs/02-deployment-design.md#referencias-técnicas)
+
+### Archivos de configuración
+
+- [Docker Compose](docker-compose.yml)
+- [Variables de entorno de ejemplo](.env.example)
+- [Workflow de validación automatizada](.github/workflows/validate.yml)
+
+## Validación de la configuración
+
+El repositorio incorpora un workflow de GitHub Actions
+que ejecuta automáticamente los siguientes controles:
+
+- Validación de la configuración de Docker Compose.
+- Interpolación de variables de entorno.
+- Verificación de los tres servicios definidos.
+- Verificación de la protección del archivo .env.
+- Verificación del versionado de .env.example.
+
+El workflow se ejecuta ante pushes y Pull Requests.
+
+La validación es estática y no requiere credenciales
+de AWS ni acceso a infraestructura productiva.
+
+Para reproducir la validación localmente:
+
+```bash
+docker compose --env-file .env.example config --quiet
+docker compose --env-file .env.example config --services
+```
+
+[Consultar ejecuciones de GitHub Actions](https://github.com/GabrielMendieta798/bsmart-devops-challenge/actions)
 
 ## Consideraciones técnicas
 
