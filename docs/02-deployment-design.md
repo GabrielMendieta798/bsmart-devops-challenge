@@ -1317,3 +1317,893 @@ inicial sin una necesidad operativa que lo justifique.
 - Recuperación ante despliegues fallidos.
 - Configuración declarativa versionada.
 - Base preparada para una evolución hacia GitOps.
+
+
+---
+
+## 2.3. Gestión segura de credenciales
+
+### Estrategia propuesta
+
+Implementaría una gestión centralizada de identidades,
+permisos y secretos, evitando la distribución manual
+de credenciales entre los integrantes del equipo.
+
+El objetivo es que cada usuario, aplicación y proceso
+automatizado disponga únicamente de los permisos
+necesarios para cumplir su función.
+
+Separaría tres tipos de identidades:
+
+- Identidades humanas: desarrolladores y administradores.
+- Identidades de automatización: pipelines CI/CD.
+- Identidades de ejecución: infraestructura y aplicaciones.
+
+Utilizaría AWS IAM Identity Center, IAM Roles,
+AWS Secrets Manager y Docker Compose Secrets.
+
+### 1. Inventario y clasificación de credenciales
+
+Antes de implementar la solución, realizaría un inventario
+de las credenciales utilizadas actualmente.
+
+| Credencial | Consumidor | Almacenamiento propuesto |
+|------------|------------|--------------------------|
+| Contraseña PostgreSQL | API | AWS Secrets Manager |
+| Token interno de API | API y Video Worker | AWS Secrets Manager |
+| Claves de servicios externos | Video Worker | AWS Secrets Manager |
+| Credenciales AWS de CI/CD | Pipelines | OIDC y AWS STS |
+| Credenciales AWS de EC2 | Instancia EC2 | IAM Instance Profile |
+| Credenciales personales | Integrantes del equipo | IAM Identity Center y proveedor de identidad |
+
+Para cada secreto registraría:
+
+- Servicio consumidor.
+- Ambiente correspondiente.
+- Responsable funcional.
+- Fecha de creación y última rotación.
+- Política de acceso.
+- Procedimiento de rotación y revocación.
+- Dependencias que podrían verse afectadas.
+
+El inventario contendría referencias y metadatos,
+nunca los valores reales de los secretos.
+
+### 2. Gestión de accesos para el equipo
+
+Utilizaría AWS IAM Identity Center para centralizar
+el acceso de los diez integrantes del equipo.
+
+Cada integrante tendría una identidad individual,
+autenticación multifactor y permisos asignados
+mediante grupos y Permission Sets.
+
+Evitaría cuentas compartidas y usuarios IAM con
+Access Keys permanentes para tareas cotidianas.
+
+La asignación de permisos se realizaría de acuerdo
+con las responsabilidades reales de cada integrante.
+
+Como modelo inicial, propondría los siguientes grupos:
+
+| Grupo | Permisos principales |
+|-------|---------------------|
+| Developers | Recursos y secretos autorizados de desarrollo. |
+| QA | Pruebas y recursos necesarios de staging. |
+| DevOps | Infraestructura, observabilidad y procedimientos de despliegue. |
+| Security / Administrators | Administración controlada de identidades, políticas y secretos. |
+
+Estos grupos representan responsabilidades y no
+requieren necesariamente equipos independientes.
+
+Para un equipo de diez personas, un integrante podría
+pertenecer a más de un grupo cuando sus funciones
+lo justifiquen.
+
+Aplicaría el principio de mínimo privilegio y
+separación de responsabilidades.
+
+El acceso a producción estaría restringido.
+
+Los desarrolladores no necesitarían conocer las
+credenciales productivas para desarrollar,
+validar o entregar cambios.
+
+Los integrantes autorizados podrían consultar
+métricas y logs de producción sin disponer
+automáticamente de permisos para leer secretos.
+
+El acceso administrativo excepcional requeriría
+justificación, aprobación y una sesión temporal.
+
+Revisaría periódicamente las asignaciones mediante
+IAM Access Analyzer, CloudTrail y controles internos.
+
+#### Aprovisionamiento de credenciales para los integrantes
+
+Los integrantes del equipo no recibirían archivos .env
+con credenciales compartidas ni contraseñas enviadas
+mediante correo electrónico o aplicaciones de mensajería.
+
+Durante el onboarding, cada integrante recibiría:
+
+- Una identidad corporativa individual.
+- Acceso al portal de AWS IAM Identity Center.
+- Configuración de autenticación multifactor.
+- Asignación de grupos y Permission Sets.
+- Acceso a los repositorios correspondientes.
+- Documentación para configurar su ambiente local.
+
+Para trabajar desde su computadora, cada integrante
+configuraría inicialmente un perfil de AWS CLI:
+
+```bash
+aws configure sso --profile bsmart-dev
+```
+
+Posteriormente iniciaría sesión mediante:
+
+```bash
+aws sso login --profile bsmart-dev
+```
+
+Este procedimiento permitiría obtener credenciales
+temporales de AWS sin distribuir Access Keys permanentes.
+
+Una vez autenticado, el integrante podría recuperar
+desde AWS Secrets Manager únicamente los secretos
+autorizados para su función y ambiente.
+
+Propondría un script común para automatizar
+el aprovisionamiento de secretos de desarrollo:
+
+```bash
+./scripts/load-dev-secrets.sh
+```
+
+Este script realizaría las siguientes operaciones:
+
+1. Verificar la identidad autenticada mediante AWS STS.
+2. Utilizar exclusivamente las referencias a secretos
+   del ambiente de desarrollo.
+3. Recuperar los valores desde AWS Secrets Manager.
+4. Preparar archivos locales con permisos restringidos,
+   fuera del repositorio y preferentemente sobre tmpfs.
+5. Validar la disponibilidad de los archivos requeridos.
+6. Proporcionar la ubicación de los secretos mediante
+   la variable SECRET_DIR.
+7. Permitir su montaje mediante Docker Compose Secrets.
+
+Los permisos de los archivos se adaptarían a los
+usuarios de ejecución de los contenedores locales.
+
+La configuración local también utilizaría imágenes,
+bases de datos y almacenamiento correspondientes
+exclusivamente al ambiente de desarrollo.
+
+Este procedimiento evitaría la distribución manual
+de credenciales y facilitaría la incorporación
+de nuevos integrantes al equipo.
+
+Para el acceso manual a bases de datos, utilizaría
+usuarios individuales y permisos específicos,
+siempre que sea técnicamente viable.
+
+Los servicios externos utilizarían credenciales
+de sandbox o desarrollo independientes de producción.
+
+Los desarrolladores no tendrían permisos para
+recuperar secretos productivos.
+
+La infraestructura productiva recuperaría sus propios
+secretos mediante el IAM Role asociado a EC2,
+sin intervención directa de los integrantes.
+
+La revocación del acceso de una persona impediría
+nuevas recuperaciones una vez invalidadas sus sesiones.
+
+Sin embargo, si hubiera tenido acceso a valores
+reutilizables, evaluaría su rotación, dado que podrían
+existir copias previamente recuperadas.
+
+AWS CloudTrail permitiría auditar qué identidad
+solicitó cada secreto y en qué momento.
+
+### 3. Separación de ambientes
+
+Mantendría credenciales independientes para:
+
+- Development.
+- Staging.
+- Production.
+
+Preferentemente utilizaría cuentas AWS separadas
+para producción y ambientes no productivos,
+administradas mediante AWS Organizations.
+
+Si inicialmente se utiliza una única cuenta,
+implementaría separación mediante IAM Policies,
+recursos independientes y controles por ambiente.
+
+Un secreto de desarrollo no debería permitir acceso
+a recursos de staging o producción.
+
+Utilizaría una convención de nombres consistente:
+
+```text
+/bsmart/development/api/database
+/bsmart/development/api/worker-token
+/bsmart/development/video/external-api-key
+
+/bsmart/staging/api/database
+/bsmart/staging/api/worker-token
+/bsmart/staging/video/external-api-key
+
+/bsmart/production/api/database
+/bsmart/production/api/worker-token
+/bsmart/production/video/external-api-key
+```
+
+Esta organización facilitaría la identificación
+de secretos, la auditoría y la aplicación de permisos.
+
+Los nombres serían complementados con tags como:
+
+```text
+Environment=production
+Application=bsmart
+Service=api
+ManagedBy=terraform
+```
+
+Los nombres y tags no constituirían por sí mismos
+una barrera de seguridad.
+
+El aislamiento efectivo dependería de las políticas
+IAM, los recursos autorizados y las restricciones
+entre ambientes.
+
+### 4. Almacenamiento centralizado de secretos
+
+Utilizaría AWS Secrets Manager como fuente centralizada
+de las credenciales de las aplicaciones.
+
+No almacenaría secretos reales en:
+
+- Repositorios Git.
+- Archivos .env versionados.
+- Dockerfiles.
+- Imágenes Docker.
+- Archivos de configuración de CI/CD.
+- Documentación interna.
+- Chats, correos electrónicos o tickets.
+
+Los secretos permanecerían cifrados mediante AWS KMS.
+
+Utilizaría la clave administrada por AWS o una clave
+administrada por la organización cuando se requiera
+un mayor control sobre las políticas de cifrado.
+
+Si se utiliza una clave administrada por la organización,
+restringiría los permisos de descifrado a las identidades
+autorizadas y al uso requerido por Secrets Manager.
+
+Mantendría versiones de los secretos para facilitar
+su administración y recuperación controlada.
+
+Para simplificar el procedimiento inicial, los tres
+secretos utilizados por Docker Compose contendrían
+un único valor textual cada uno.
+
+### 5. Permisos de las aplicaciones
+
+La instancia EC2 utilizaría un IAM Role asociado
+mediante un Instance Profile.
+
+Este rol dispondría de permisos específicos para:
+
+- Descargar las imágenes requeridas desde Amazon ECR.
+- Recuperar los secretos de su ambiente.
+- Descargar los artefactos de despliegue autorizados.
+- Publicar métricas y logs cuando corresponda.
+- Operar como instancia administrada por AWS SSM.
+
+No utilizaría permisos generales como:
+
+```text
+secretsmanager:*
+Resource: *
+```
+
+Para la lectura de secretos productivos utilizaría
+una política limitada a los ARN correspondientes.
+
+Ejemplo ilustrativo de una política de lectura:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadProductionRuntimeSecrets",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": [
+        "arn:aws:secretsmanager:us-east-1:123456789012:secret:/bsmart/production/api/database-??????",
+        "arn:aws:secretsmanager:us-east-1:123456789012:secret:/bsmart/production/api/worker-token-??????",
+        "arn:aws:secretsmanager:us-east-1:123456789012:secret:/bsmart/production/video/external-api-key-??????"
+      ]
+    }
+  ]
+}
+```
+
+Los identificadores de cuenta y región son ilustrativos.
+
+En una implementación real utilizaría preferentemente
+los ARN exactos de los secretos aprovisionados.
+
+La política anterior no permite crear, modificar,
+rotar ni eliminar secretos.
+
+Estas operaciones quedarían reservadas a identidades
+administrativas o mecanismos de rotación autorizados.
+
+También exigiría IMDSv2 y restringiría el acceso
+de los contenedores al endpoint de metadata de EC2
+mediante controles de red apropiados.
+
+Esto evitaría que las aplicaciones utilicen
+directamente las credenciales del IAM Role del host
+cuando no lo necesitan.
+
+### 6. Integración con Docker Compose
+
+El procedimiento de despliegue recuperaría los secretos
+desde AWS Secrets Manager antes de iniciar o actualizar
+los contenedores.
+
+Utilizaría el IAM Role de EC2 para realizar las
+solicitudes, sin almacenar Access Keys permanentes.
+
+Los valores serían materializados en archivos protegidos
+dentro de un filesystem respaldado por memoria.
+
+Por ejemplo:
+
+```text
+/run/bsmart-secrets/
+├── db_password
+├── worker_api_token
+└── external_api_key
+```
+
+Verificaría que /run se encuentre respaldado por tmpfs.
+
+El directorio estaría administrado por root y los
+archivos tendrían permisos compatibles con los UID
+y GID definidos en Docker Compose.
+
+| Archivo | UID:GID | Permisos |
+|---------|---------|----------|
+| db_password | 10002:10000 | 0400 |
+| worker_api_token | 0:10000 | 0440 |
+| external_api_key | 10003:10000 | 0400 |
+
+Estos valores asumen Docker Engine convencional
+sin remapeo de usuarios.
+
+Los permisos se aplicarían sobre los archivos
+del host, ya que Docker Compose utiliza bind mounts
+para los secretos cuyo origen es un archivo.
+
+La recuperación de los secretos podría realizarse
+mediante un procedimiento como el siguiente.
+
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+umask 077
+
+SECRET_DIR="/run/bsmart-secrets"
+AWS_REGION="us-east-1"
+
+install -d -m 0700 -o root -g root "$SECRET_DIR"
+
+load_secret() {
+    local secret_id="$1"
+    local filename="$2"
+    local owner="$3"
+    local mode="$4"
+    local tmp
+
+    tmp="$(mktemp "${SECRET_DIR}/.secret.XXXXXX")"
+
+    if ! aws secretsmanager get-secret-value \
+        --region "$AWS_REGION" \
+        --secret-id "$secret_id" \
+        --version-stage AWSCURRENT \
+        --query SecretString \
+        --output json \
+        --no-cli-pager \
+        | jq -je 'select(type == "string" and length > 0)' \
+        > "$tmp"; then
+
+        rm -f "$tmp"
+        return 1
+    fi
+
+    chown "$owner" "$tmp"
+    chmod "$mode" "$tmp"
+
+    mv -f "$tmp" "${SECRET_DIR}/${filename}"
+}
+
+load_secret \
+    "/bsmart/production/api/database" \
+    "db_password" \
+    "10002:10000" \
+    "0400"
+
+load_secret \
+    "/bsmart/production/api/worker-token" \
+    "worker_api_token" \
+    "0:10000" \
+    "0440"
+
+load_secret \
+    "/bsmart/production/video/external-api-key" \
+    "external_api_key" \
+    "10003:10000" \
+    "0400"
+```
+
+Este fragmento representa un ejemplo de aprovisionamiento
+de secretos y requiere AWS CLI, jq, permisos administrativos
+y un IAM Role correctamente configurado.
+
+En una implementación completa validaría todos los
+secretos antes de activar la nueva configuración,
+incorporaría limpieza de archivos temporales ante fallos
+y evitaría actualizaciones parciales mediante una
+preparación por release.
+
+No habilitaría set -x ni imprimiría los valores
+recuperados durante la ejecución.
+
+Si el aprovisionamiento falla, interrumpiría el
+despliegue antes de reemplazar los contenedores activos.
+
+Docker Compose montaría los archivos únicamente
+en los servicios autorizados.
+
+| Secreto | Web | API | Video Worker |
+|---------|-----|-----|--------------|
+| db_password | No | Sí | No |
+| worker_api_token | No | Sí | Sí |
+| external_api_key | No | No | Sí |
+
+Las aplicaciones consumirían los secretos mediante
+archivos montados en /run/secrets.
+
+Por ejemplo:
+
+```yaml
+environment:
+  DB_PASSWORD_FILE: /run/secrets/db_password
+
+secrets:
+  - db_password
+```
+
+La variable contiene la ubicación del archivo,
+no el valor de la contraseña.
+
+Las aplicaciones deberán implementar la lectura
+de estos archivos.
+
+El archivo .env.example contendría únicamente
+configuración no sensible y referencias a las
+ubicaciones de los secretos.
+
+Docker Compose Secrets actuaría como mecanismo
+de entrega de credenciales, mientras que AWS
+Secrets Manager sería su fuente centralizada.
+
+### 7. Recuperación de secretos después de un reinicio
+
+Como los archivos se almacenarían sobre tmpfs,
+su contenido desaparecería al reiniciar EC2.
+
+Por este motivo, configuraría un servicio systemd
+encargado de recuperar los secretos antes de iniciar
+los contenedores.
+
+En un host dedicado a esta plataforma, ordenaría
+el servicio de aprovisionamiento antes de
+docker.service, evitando que las políticas de
+reinicio automático intenten iniciar los contenedores
+sin disponer de sus archivos de secretos.
+
+También verificaría la disponibilidad del volumen
+EBS antes de iniciar Docker.
+
+Si Secrets Manager no está disponible o los secretos
+no pueden recuperarse, impediría el arranque
+inseguro de las aplicaciones y generaría una alerta.
+
+El procedimiento utilizaría reintentos controlados
+y no recurriría a credenciales almacenadas en
+el repositorio como mecanismo de contingencia.
+
+### 8. Gestión de credenciales en CI/CD
+
+Utilizaría OpenID Connect entre GitHub Actions
+y AWS IAM.
+
+Los pipelines obtendrían credenciales temporales
+mediante AWS STS.
+
+No almacenaría AWS_ACCESS_KEY_ID ni
+AWS_SECRET_ACCESS_KEY permanentes en GitHub.
+
+Definiría roles independientes:
+
+| Rol | Responsabilidad |
+|-----|-----------------|
+| CI Web | Publicar imágenes de la aplicación web. |
+| CI API | Publicar imágenes de la API. |
+| CI Video | Publicar imágenes del procesador de video. |
+| CD Staging | Ejecutar despliegues autorizados en staging. |
+| CD Production | Ejecutar despliegues autorizados en producción. |
+| EC2 Runtime | Recuperar imágenes y secretos de ejecución. |
+
+Restringiría las políticas de confianza de OIDC
+al repositorio, rama o ambiente autorizado,
+validando los claims emitidos por GitHub.
+
+Los jobs asociados a Pull Requests no recibirían
+credenciales productivas.
+
+Los pipelines de construcción no necesitarían
+leer las contraseñas de PostgreSQL ni los tokens
+utilizados por las aplicaciones en producción.
+
+Los secretos productivos serían recuperados
+directamente desde EC2 durante el despliegue.
+
+Restringiría también la ejecución de AWS SSM
+a documentos de despliegue autorizados.
+
+El acceso administrativo al host y la modificación
+de procedimientos de despliegue se considerarían
+operaciones sensibles, dado que pueden proporcionar
+acceso indirecto a las credenciales.
+
+Si algún servicio de CI requiere un secreto propio,
+como un token de SonarQube o una clave de GitHub App,
+lo almacenaría mediante un gestor de secretos o
+GitHub Actions Secrets con alcance restringido.
+
+Estos secretos serían independientes de las
+credenciales utilizadas por las aplicaciones.
+
+### 9. Rotación de credenciales
+
+Definiría una política de rotación considerando
+la criticidad y las capacidades de cada servicio.
+
+Como valores iniciales de referencia:
+
+| Credencial | Política propuesta |
+|------------|--------------------|
+| Credenciales AWS de CI/CD | Temporales mediante STS. |
+| Credenciales AWS de EC2 | Temporales mediante IAM Role. |
+| Contraseña PostgreSQL | Rotación cada 30 días cuando sea viable. |
+| Token interno de API | Rotación cada 30 días. |
+| API Keys externas | Cada 60-90 días o según el proveedor. |
+| Credencial comprometida | Revocación o rotación inmediata. |
+
+Los intervalos son ilustrativos y deberán ajustarse
+a las políticas de seguridad y restricciones operativas.
+
+#### Rotación de PostgreSQL
+
+Evaluaría una función Lambda de rotación integrada
+con AWS Secrets Manager, adaptada a PostgreSQL.
+
+Como la base de datos existente podría ejecutarse
+directamente sobre EC2, garantizaría previamente
+la conectividad de la función con PostgreSQL y
+los permisos necesarios para modificar credenciales.
+
+La rotación debería:
+
+1. Generar una nueva credencial.
+2. Aplicarla sobre PostgreSQL.
+3. Validar la conectividad.
+4. Actualizar la versión activa en Secrets Manager.
+5. Aprovisionar nuevamente el archivo db_password.
+6. Recrear o recargar la API.
+7. Validar el funcionamiento de la aplicación.
+
+Cuando sea viable, utilizaría usuarios alternados
+para reducir interrupciones durante la transición.
+
+No rotaría credenciales automáticamente en producción
+sin validar previamente el procedimiento en staging.
+
+#### Rotación del token interno
+
+Coordinaría la actualización de la API y el
+procesador de video, dado que ambos consumen
+el mismo secreto.
+
+Cuando las aplicaciones lo permitan, utilizaría
+un período de transición durante el cual la API
+acepte temporalmente el token anterior y el nuevo.
+
+Después actualizaría el worker, validaría sus
+solicitudes y revocaría el token anterior.
+
+Esto evitaría interrupciones por incompatibilidad
+entre los servicios durante la rotación.
+
+#### Rotación de claves externas
+
+La rotación dependería de las funcionalidades
+proporcionadas por cada servicio externo.
+
+Si el proveedor dispone de una API de administración
+de credenciales, automatizaría la generación,
+validación y revocación de las claves.
+
+Cuando el proveedor permita mantener dos claves
+simultáneamente, utilizaría el siguiente procedimiento:
+
+1. Generar una nueva clave.
+2. Actualizar AWS Secrets Manager.
+3. Aprovisionar el secreto en EC2.
+4. Actualizar el servicio consumidor.
+5. Verificar su funcionamiento.
+6. Revocar la clave anterior.
+
+Si el proveedor no permite automatizar la rotación,
+generaría una notificación previa al vencimiento
+y ejecutaría un procedimiento controlado.
+
+Cambiar el valor almacenado en Secrets Manager
+no modifica automáticamente la credencial
+en el sistema externo.
+
+### 10. Aplicación de secretos rotados
+
+Docker Compose no sincroniza automáticamente
+los secretos con AWS Secrets Manager.
+
+Por ello, después de una rotación, recuperaría
+la nueva versión del secreto y recrearía los
+contenedores afectados cuando corresponda.
+
+Por ejemplo, ante una actualización del token interno:
+
+```bash
+docker compose \
+  --env-file environments/production.env \
+  up -d \
+  --no-build \
+  --no-deps \
+  --force-recreate \
+  --wait \
+  api video-worker
+```
+
+La ejecución se coordinaría con el mecanismo de
+locking definido para los despliegues.
+
+No actualizaría los archivos de secretos mientras
+exista otro procedimiento modificando la plataforma.
+
+El rollback de una aplicación tampoco debería
+restaurar automáticamente una credencial revocada.
+
+La recuperación dependería del estado real de la
+credencial en PostgreSQL o en el servicio externo.
+
+### 11. Prevención de exposición de credenciales
+
+Incorporaría secret scanning mediante Gitleaks
+en los pipelines de CI.
+
+También ofrecería validaciones locales mediante
+pre-commit hooks para detectar errores antes del push.
+
+Los controles del pipeline seguirían siendo
+obligatorios, independientemente de las
+validaciones locales.
+
+Configuraría .gitignore para excluir:
+
+```gitignore
+.env
+.env.*
+!.env.example
+
+secrets/
+*.pem
+*.key
+*.tfvars
+*.tfstate
+*.tfstate.*
+```
+
+Utilizaría .dockerignore para impedir que archivos
+sensibles ingresen al contexto de construcción.
+
+Evitaría introducir secretos mediante argumentos
+de build o capas de imágenes Docker.
+
+Si un build necesita acceder a una dependencia
+privada, utilizaría BuildKit Secret Mounts.
+
+Los secretos no deberían aparecer en:
+
+- Logs de aplicaciones.
+- Reportes de errores.
+- Salidas de pipelines.
+- Artefactos de CI/CD.
+- Comandos registrados en el historial.
+- Respuestas de endpoints de diagnóstico.
+
+También protegería el estado de Terraform mediante
+almacenamiento remoto cifrado y acceso restringido.
+
+Marcar una variable Terraform como sensitive
+no evita que su valor pueda quedar en el state.
+
+Por este motivo, utilizaría Terraform para
+aprovisionar recursos, políticas y referencias,
+evitando introducir valores reales de secretos
+en configuraciones versionadas.
+
+### 12. Auditoría y monitoreo
+
+Utilizaría AWS CloudTrail para registrar operaciones
+sobre AWS Secrets Manager e IAM.
+
+Monitorearía especialmente:
+
+| Evento | Acción |
+|--------|--------|
+| GetSecretValue | Auditar identidad y recurso consultado. |
+| AccessDenied | Investigar intentos repetidos de acceso. |
+| PutSecretValue | Verificar cambios autorizados. |
+| RotateSecret | Registrar el inicio de la rotación. |
+| RotationFailed | Generar una alerta operativa. |
+| DeleteSecret | Investigar eliminaciones inesperadas. |
+| Cambios en IAM Policies | Revisar ampliaciones de permisos. |
+
+Integraría CloudTrail con EventBridge y Amazon SNS
+para notificar eventos relevantes al equipo DevOps
+y a los responsables de seguridad.
+
+No generaría una alerta por cada lectura normal
+de un secreto.
+
+Establecería alertas sobre patrones anómalos,
+accesos no autorizados y operaciones sensibles.
+
+Revisaría periódicamente:
+
+- Identidades con permisos innecesarios.
+- Roles que no se utilizan.
+- Credenciales próximas a vencer.
+- Rotaciones fallidas.
+- Cambios en políticas de acceso.
+- Uso de permisos administrativos.
+- Accesos desde identidades inesperadas.
+
+### 13. Incorporación y desvinculación de integrantes
+
+Ante la incorporación de un nuevo integrante:
+
+1. Crearía una identidad individual.
+2. Configuraría autenticación multifactor.
+3. Asignaría los grupos correspondientes.
+4. Otorgaría acceso únicamente a los repositorios
+   y ambientes necesarios.
+5. Documentaría los permisos concedidos.
+
+Ante la salida de un integrante:
+
+1. Deshabilitaría su identidad corporativa.
+2. Eliminaría las asignaciones de IAM Identity Center.
+3. Revocaría las sesiones activas según corresponda.
+4. Eliminaría sus accesos a GitHub y otros servicios.
+5. Revocaría tokens personales, claves SSH y
+   otros accesos individuales cuando existan.
+6. Revisaría las credenciales a las que pudo acceder.
+7. Rotaría aquellas que pudieran haber quedado expuestas.
+8. Registraría las acciones realizadas.
+
+No sería necesario cambiar indiscriminadamente
+todas las credenciales si el integrante nunca
+tuvo acceso a sus valores.
+
+La utilización de identidades individuales permite
+revocar accesos sin afectar al resto del equipo.
+
+### 14. Respuesta ante una credencial comprometida
+
+Si se detecta una credencial expuesta en Git,
+logs, imágenes Docker u otro medio, la consideraría
+potencialmente comprometida.
+
+Ejecutaría el siguiente procedimiento:
+
+1. Identificar la credencial y los recursos afectados.
+2. Contener el acceso no autorizado.
+3. Revocar o rotar la credencial comprometida.
+4. Actualizar AWS Secrets Manager.
+5. Actualizar los servicios consumidores.
+6. Validar su funcionamiento.
+7. Revisar CloudTrail y los registros disponibles
+   del sistema afectado.
+8. Eliminar la exposición del repositorio o artefacto.
+9. Documentar el incidente y su causa raíz.
+10. Incorporar controles preventivos adicionales.
+
+Eliminar un secreto del último commit no garantiza
+que desaparezca del historial de Git.
+
+Cuando corresponda, utilizaría git-filter-repo
+para remover información sensible del historial,
+coordinando el cambio con todo el equipo.
+
+La limpieza del historial nunca reemplazaría
+la revocación de la credencial comprometida.
+
+### 15. Limitaciones de la arquitectura inicial
+
+Docker Compose Secrets permite separar los secretos
+entregados a cada contenedor, pero no proporciona
+aislamiento equivalente a identidades IAM independientes
+por aplicación.
+
+En nuestra arquitectura, las credenciales son
+recuperadas mediante el IAM Role de EC2.
+
+Un administrador privilegiado del host podría acceder
+a los archivos de secretos y a los permisos del rol.
+
+Por este motivo, restringiría estrictamente:
+
+- Acceso administrativo a EC2.
+- Acceso al socket de Docker.
+- Pertenencia al grupo docker.
+- Ejecución de documentos SSM.
+- Modificación de scripts de despliegue.
+- Acceso al endpoint de metadata de EC2.
+
+Si la plataforma evoluciona hacia Amazon ECS,
+evaluaría la utilización de Task Roles independientes
+por servicio.
+
+Esto permitiría otorgar permisos AWS específicos
+a cada aplicación y reducir el alcance de una
+eventual vulneración de credenciales.
+
+### Resultado esperado
+
+- Eliminación de credenciales compartidas entre usuarios.
+- Identidades individuales y accesos auditables.
+- Autenticación multifactor.
+- Separación de credenciales por ambiente y servicio.
+- Reducción de credenciales AWS permanentes.
+- Gestión centralizada de secretos.
+- Entrega de credenciales según mínimo privilegio.
+- Rotación controlada y revocación de accesos.
+- Detección preventiva de secretos expuestos.
+- Respuesta organizada ante incidentes de seguridad.
+- Integración segura con Docker Compose y CI/CD.
